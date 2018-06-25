@@ -67,3 +67,37 @@ int maxCyclicDist(int targetPage);
  */
 int findUnusedFrame();
 
+/**
+ * called if findUnusedFrame fails.
+ * use maxCyclicDist, clear table, and delete parent reference to it
+ * @return
+ */
+int swapPage();
+
+/**
+ * Iterates over tree based on an address: [index, offset].
+ * returns a frame. (if 0, finds a free frame)
+ * @param tree
+ * @return
+ */
+int* traverseTree(int **tree, int* address);
+
+/**
+ * calculates the depth of the tree.
+ * @param virtualMemorySize
+ * @param pageSize
+ * @return
+ */
+int findTreeDepth(int virtualMemorySize, int pageSize);
+
+/**
+ * After traversing over the tree and finding the frame, write to it.
+ * @return
+ */
+int writeToLeaf(int frameNum, int pageNum);
+
+/**
+ * After traversing over the tree and finding the frame, read from it.
+ * @return
+ */
+int readFromLeaf(int frameNum, int pageNum);
