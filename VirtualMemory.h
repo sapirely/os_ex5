@@ -4,13 +4,17 @@
 //#include <string>
 #include "MemoryConstants.h"
 #include <cstdio>
+#include <bitset>
+#include <algorithm>
+
+#define INDEX_LENGTH (VIRTUAL_ADDRESS_WIDTH-OFFSET_WIDTH) // is this correct todo
 
 // ------------------------------------- PT in the tree ------------------------------------- //
-struct Table
-{
-    int* table;
-    int maxReferencedFrame;
-}Table;
+//struct Table
+//{
+//    int* table;
+//    int maxReferencedFrame;
+//}Table;
 
 
 // ------------------------------------- library methods ------------------------------------- //
@@ -45,14 +49,14 @@ int VMwrite(uint64_t virtualAddress, word_t value);
  * @param address
  * @return
  */
-int* addressToBin(int address);
+std::bitset<VIRTUAL_ADDRESS_WIDTH> addressToBin(int address);
 
 /**
  * Interpret a binary address as an index + offset.
  * @param address
- * @return [index, offset] array of ints
+ * @param addressTuple - input, function updates it to [index, offset]
  */
-int* addressInterpreter(int address);
+void addressInterpreter(int address, uint64_t addressTuple[2]);
 
 /**
  * Find page with max cyclic distance from the target page.
@@ -89,6 +93,7 @@ int* traverseTree(int **tree, int* address);
  * @return
  */
 int findTreeDepth(int virtualMemorySize, int pageSize);
+// no need - defined in MemoryConstants
 
 /**
  * After traversing over the tree and finding the frame, write to it.
