@@ -81,6 +81,7 @@ int findUnusedFrame(uint64_t root, int currDepth, uint64_t& maxDistPage, uint64_
                     double& maxDist, uint64_t pageSwapInIdx, uint64_t& maxUsedFrameIdx,
                     uint64_t lastTableCreated)
 {
+    bool tableIsEmpty = true;
     word_t referencedFrameIdx;
     for (int entry_idx = 0; entry_idx < PAGE_SIZE; entry_idx++)
     {
@@ -89,15 +90,8 @@ int findUnusedFrame(uint64_t root, int currDepth, uint64_t& maxDistPage, uint64_
             // update max referenced frame
             maxUsedFrameIdx = (uint64_t)referencedFrameIdx;
         }
-        if ((referencedFrameIdx == 0)) {
-            // empty entry (page fault)
-            if ((entry_idx == 0)  && (root != lastTableCreated)) { // todo - ok?
-                return 0; // signal that an empty table was found and that's not a table we've just created
-            } else {
-                // non-existing table
-                return -1; // (we know that all remaining entries are 0 as well)
-            }
-        } else {
+        if (referencedFrameIdx != 0) {
+            tableIsEmpty = false;
             if (currDepth == TABLES_DEPTH) {
                 // we've reached a leaf, i.e a reference to a page
                 double cyclicDist = calcCyclicDist((uint64_t)referencedFrameIdx, pageSwapInIdx);
@@ -125,6 +119,10 @@ int findUnusedFrame(uint64_t root, int currDepth, uint64_t& maxDistPage, uint64_
                 }
             }
         }
+    }
+    if (tableIsEmpty && (root != lastTableCreated)) {
+        // we ran through all entries, which are 0, and it's not a table we've just created
+        return 0;
     }
     return -1; // no empty table was found.
 }
