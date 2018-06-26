@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <bitset>
 #include <algorithm>
+#include <cmath>
 
 #define INDEX_LENGTH (VIRTUAL_ADDRESS_WIDTH-OFFSET_WIDTH) // is this correct todo
 
@@ -71,12 +72,12 @@ int maxCyclicDist(int targetPage);
  * @param maxDist max cyclic distance found.
  * @param maxUsedFrame maximal index of a referenced frame.
  * @param currDepth depth of the subtree rooted at currTableAddress.
- *
+ * @param maxDistParent parent of the page with max cyclic distance so far.
  * @return idx of an unused frame in the physical memory (if an empty table was found, the method
  * initializes its entries to 0 and returns an idx of a frame in the table).
  */
-int findUnusedFrame(uint64_t currTableAddress, int currDepth, uint64_t maxDistPage,
-                    uint64_t maxDist, uint64_t maxUsedFrame);
+int findUnusedFrame(uint64_t currTableAddress, int currDepth, uint64_t& maxDistPage,
+                    uint64_t maxDistParent, uint64_t maxDist, uint64_t maxUsedFrame);
 
 /**
  * called if findUnusedFrame fails.
@@ -119,4 +120,4 @@ int readFromLeaf(int frameNum, int pageNum);
  * want to retrieve.
  * @return
  */
-uint64_t calcCyclicDist(uint64_t pageIdx, uint64_t pageSwapInIdx);
+double calcCyclicDist(uint64_t pageIdx, uint64_t pageSwapInIdx);
