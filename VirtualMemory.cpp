@@ -22,7 +22,7 @@ void VMinitialize() {
 int VMread(uint64_t virtualAddress, word_t* value) {
     uint64_t frame = callTraverseTree(virtualAddress);
     uint64_t offset = calcOffset(virtualAddress, OFFSET_WIDTH);
-    PMread((frame*PAGE_SIZE)+offset, value); // todo: is the calc correct
+    PMread((frame*PAGE_SIZE)+offset, value);  // todo: is the calc correct
     return 1;
 }
 
