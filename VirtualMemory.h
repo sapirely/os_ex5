@@ -66,10 +66,17 @@ void addressInterpreter(int address, uint64_t addressTuple[2]);
 int maxCyclicDist(int targetPage);
 
 /**
+ * @param currTableAddress root of the subtree.
+ * @param maxDistPage idx of the page with max cyclic distance so far.
+ * @param maxDist max cyclic distance found.
+ * @param maxUsedFrame maximal index of a referenced frame.
+ * @param currDepth depth of the subtree rooted at currTableAddress.
+ *
  * @return idx of an unused frame in the physical memory (if an empty table was found, the method
  * initializes its entries to 0 and returns an idx of a frame in the table).
  */
-int findUnusedFrame();
+int findUnusedFrame(uint64_t currTableAddress, int currDepth, uint64_t maxDistPage,
+                    uint64_t maxDist, uint64_t maxUsedFrame);
 
 /**
  * called if findUnusedFrame fails.
@@ -84,7 +91,7 @@ int swapPage();
  * @param tree
  * @return
  */
-int* traverseTree(int **tree, int* address);
+int* traverseTree(int* address);
 
 /**
  * calculates the depth of the tree.
@@ -106,3 +113,10 @@ int writeToLeaf(int frameNum, int pageNum);
  * @return
  */
 int readFromLeaf(int frameNum, int pageNum);
+
+/**
+ * Calculates the cyclic distance of the page in index pageIdx from the index of the page that we
+ * want to retrieve.
+ * @return
+ */
+uint64_t calcCyclicDist(uint64_t pageIdx, uint64_t pageSwapInIdx);

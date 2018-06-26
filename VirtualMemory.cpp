@@ -65,3 +65,75 @@ int maxCyclicDist(int targetPage){
     ulong maxDist = std::min((ulong)NUM_PAGES-std::abs(targetPage-p),  (ulong) std::abs(targetPage-p));
     // iterate over all p's and find maximal of those (max of mins)
 }
+
+/**
+ * @param root root of the subtree
+ * @param maxDistPage idx of the page with max cyclic distance so far
+ * @param maxDist max cyclic distance found
+ * @param maxUsedFrameIdx maximal index of a referenced frame.
+ * @param currDepth depth of the subtree rooted at currTableAddress.
+ *
+ * @return idx of an unused frame in the physical memory (if an empty table was found, the method
+ * initializes its entries to 0 and returns an idx of a frame in the table).
+ */
+int findUnusedFrame(uint64_t root, int currDepth, uint64_t& maxDistPage,
+                    uint64_t& maxDist, uint64_t pageSwapInIdx, uint64_t& maxUsedFrameIdx)
+{
+    word_t referencedFrameIdx;
+    for (int entry_idx = 0; entry_idx < PAGE_SIZE; entry_idx++) // for every entry
+    {
+        PMread((root * PAGE_SIZE) + entry_idx, &referencedFrameIdx);
+        if (referencedFrameIdx > maxUsedFrameIdx) // update max referenced frame
+        {
+            maxUsedFrameIdx = (uint64_t)referencedFrameIdx;
+        }
+
+        if (referencedFrameIdx == 0) // empty entry (page fault)
+        {
+            if ((entry_idx == 0))  // found an empty table
+            {
+                return 0; // signal that an empty table was found
+            }
+            else // non-existing table
+            {
+                return -1; // (we know that all remaining entries are 0 as well)
+            }
+        }
+        else
+        {
+            if (currDepth == TABLES_DEPTH) // we've reached a leaf, i.e a reference to a page
+            {
+                uint64_t cyclicDist = calcCyclicDist((uint64_t)referencedFrameIdx, pageSwapInIdx);
+                if (cyclicDist > maxDist)
+                {
+                    maxDist = cyclicDist;
+                    maxDistPage = (uint64_t)referencedFrameIdx; //todo - ok?
+                }
+                return -1; // no empty table was found
+            }
+            else // not a leaf - check children.
+            {
+                int retVal = findUnusedFrame((uint64_t)referencedFrameIdx, currDepth+1,
+                                                       maxDistPage, maxDist, pageSwapInIdx,
+                                                       maxUsedFrameIdx);
+                if (retVal == -1)
+                    // no empty table was found in the child and his children
+                {
+                    continue;
+                }
+                else if (retVal == 0)
+                    // the child is an empty table
+                {
+                    PMwrite((root * PAGE_SIZE) + entry_idx ,0); // remove reference to table
+                    return referencedFrameIdx;
+                }
+                else
+                    // found an empty table in grandson or one of his descendants.
+                {
+                    return retVal;
+                }
+            }
+        }
+    }
+    return -1; // no empty table was found.
+}
