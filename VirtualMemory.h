@@ -57,7 +57,7 @@ std::bitset<VIRTUAL_ADDRESS_WIDTH> addressToBin(int address);
  * @param address
  * @param addressTuple - input, function updates it to [index, offset]
  */
-void addressInterpreter(int address, uint64_t addressTuple[2]);
+void addressInterpreter(int address, int* index, int* offset, int offsetSize);
 
 /**
  * Find page with max cyclic distance from the target page.
@@ -87,12 +87,35 @@ int findUnusedFrame(uint64_t currTableAddress, int currDepth, uint64_t& maxDistP
 int swapPage();
 
 /**
+ * @param address
+ * @param offsetSize
+ * @return the offset based on the address and the offset size.
+ */
+uint64_t calcOffset(uint64_t address, uint64_t offsetSize);
+
+/**
+ * Gets an address and returns it split to indices and offset - used to traverse over the tree
+ * @param address
+ * @param parsedAddress - output
+ */
+void parseAddress(uint64_t address, uint64_t * parsedAddress);
+
+/**
  * Iterates over tree based on an address: [index, offset].
  * returns a frame. (if 0, finds a free frame)
- * @param tree
+ * @param address
+ * @return frame
+ */
+uint64_t callTraverseTree(uint64_t address);
+
+
+/**
+ * INNER FUNC!!! use callTraverseTree.
+ * Iterates over tree based on an address: [index, offset].
+ * returns a frame. (if 0, finds a free frame)
  * @return
  */
-int* traverseTree(int* address);
+int traverseTree(int i, int root, uint64_t* parsedAddress);
 
 /**
  * calculates the depth of the tree.

@@ -1,7 +1,12 @@
 #include "VirtualMemory.h"
 #include "PhysicalMemory.h"
 
+// ------------------------------------- todos & notes ------------------------------------- //
+//todo: chane ints to uint64_t
+// deleted addressToBin since can do bit operations on any number
+// addressInterpreter might be redundant
 
+// ------------------------------------- library methods ------------------------------------- //
 
 void clearTable(uint64_t frameIndex) {
     for (uint64_t i = 0; i < PAGE_SIZE; ++i) {
@@ -15,6 +20,9 @@ void VMinitialize() {
 
 
 int VMread(uint64_t virtualAddress, word_t* value) {
+    uint64_t frame = callTraverseTree(virtualAddress);
+    uint64_t offset = calcOffset(virtualAddress, OFFSET_WIDTH);
+    PMread((frame*PAGE_SIZE)+offset, value); // todo: is the calc correct
     return 1;
 }
 
@@ -26,43 +34,91 @@ int VMwrite(uint64_t virtualAddress, word_t value) {
 // ------------------------------------- inner methods ------------------------------------- //
 
 /**
- * Translates a decimal address to binary.
  * @param address
- * @return
+ * @param offsetSize
+ * @return the offset based on the address and the offset size.
  */
-//std::bitset<VIRTUAL_ADDRESS_WIDTH> addressToBin(int address){
-//    return std::bitset<VIRTUAL_ADDRESS_WIDTH>(address);
-//}
-/// we probably don't need this - we can do bit operations on any number..
-
-/**
- * Interpret a binary address as an index + offset.
- * @param address
- * @param addressTuple - input, function updates it to [index, offset]
- */
-void addressInterpreter(int address, uint64_t addressTuple[2])
-{
-    uint64_t binaryAddress = address;
-    uint64_t offset = 0;
-    uint64_t index;
-    int powerOfTwo = 2;
-    powerOfTwo<<=OFFSET_WIDTH-1; //2^OFFSETWIDTH
+uint64_t calcOffset(uint64_t address, uint64_t offsetSize){
+    uint64_t powerOfTwo = 2;
+    powerOfTwo<<=offsetSize-1; //2^OFFSETWIDTH
     uint64_t pattern = powerOfTwo-1; // A number with OFFSET_WIDTH ones
-    offset = (pattern & binaryAddress);
-    binaryAddress >>= OFFSET_WIDTH; //shift right - trims the offset
-    addressTuple[1] = offset;
-    addressTuple[0] = binaryAddress;
+    return (pattern & address);
 }
 
 /**
- * Find page with max cyclic distance from the target page.
- * @param targetPage
- * @return index of page with max cyclic distance from the target page.
+ *
+ * @param address
+ * @param index - output
+ * @param offset - output
+ * @param offsetSize
  */
-int maxCyclicDist(int targetPage){
-    int p; // p are the pages already occupied in the table - todo
-    ulong maxDist = std::min((ulong)NUM_PAGES-std::abs(targetPage-p),  (ulong) std::abs(targetPage-p));
-    // iterate over all p's and find maximal of those (max of mins)
+void addressInterpreter(int address, int* index, int* offset, int offsetSize) // offsetSize = OFFSET_WIDTH
+{
+    // changed to int - an address is at most 2^20, within int limits
+    int binaryAddress = address;
+    *offset = calcOffset(binaryAddress, offsetSize);
+    binaryAddress >>= offsetSize; //shift right - trims the offset
+    *index = binaryAddress;
+}
+
+
+/**
+ * Gets an address and returns it split to indices and offset - used to traverse over the tree
+ * @param address
+ * @param parsedAddress - output
+ */
+void parseAddress(uint64_t address, uint64_t * parsedAddress){
+
+    // parsed address is an array such as that every cell is the "offset" of a page table
+    // the real offset is saved in the last cell
+    // the index part of the address is split into TABLE_DEPTH indices, each of them PAGE_SIZE sized
+    // so every index is used to navigate in a level of the tree - a page table
+    parsedAddress[TABLES_DEPTH-1] = calcOffset(address, OFFSET_WIDTH);
+    address>>=OFFSET_WIDTH; // trim offset
+    for (int i=TABLES_DEPTH-2; i>=0; i--){
+        parsedAddress[i] = calcOffset(address, PAGE_SIZE);
+        address>>=PAGE_SIZE; // trim index
+    }
+}
+
+/**
+ * Iterates over tree based on an address: [index, offset].
+ * returns a frame. (if 0, finds a free frame)
+ * @param address
+ * @return frame
+ */
+uint64_t callTraverseTree(uint64_t address){
+    uint64_t parsedAddress[TABLES_DEPTH];
+    parseAddress(address, parsedAddress);
+    int i=0;
+    int root=0;
+    int frame = traverseTree(i, root, parsedAddress);
+    return (uint64_t) frame; // todo: fix
+}
+
+/**
+ * INNER FUNC!!! use callTraverseTree. //todo: hide
+ * Iterates over tree based on an address: [index, offset].
+ * returns a frame. (if 0, finds a free frame)
+ * @return
+ */
+
+// there are TABLE_DEPTH levels, each table is PAGE_SIZE size;
+//
+int traverseTree(int i, int root, uint64_t* parsedAddress){
+    int index;
+    if (i<TABLES_DEPTH-1) // -1 bc we don't want the value in the frame, just the frame number
+    {
+        index = parsedAddress[i];
+        PMread((root * PAGE_SIZE) + index, &root);
+        if (root==0){
+//            root = findUnusedFrame(); //todo
+        }
+        i++;
+        traverseTree(i, root, parsedAddress);
+    } else { // finished traversing over the tree, last frame is in root
+        return root;
+    }
 }
 
 /**
