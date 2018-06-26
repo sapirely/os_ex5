@@ -134,8 +134,10 @@ int traverseTree(int i, int root, uint64_t* parsedAddress){
  * referenced frame, and maxDistPage to hold the index of the page with max cyclic distance.
  */
 int findUnusedFrame(uint64_t root, int currDepth, uint64_t& maxDistPage, uint64_t& maxDistParent,
-                    uint64_t& maxDist, uint64_t pageSwapInIdx, uint64_t& maxUsedFrameIdx)
+                    double& maxDist, uint64_t pageSwapInIdx, uint64_t& maxUsedFrameIdx,
+                    uint64_t lastTableCreated)
 {
+    bool tableIsEmpty = true;
     word_t referencedFrameIdx;
     for (int entry_idx = 0; entry_idx < PAGE_SIZE; entry_idx++)
     {
@@ -144,18 +146,11 @@ int findUnusedFrame(uint64_t root, int currDepth, uint64_t& maxDistPage, uint64_
             // update max referenced frame
             maxUsedFrameIdx = (uint64_t)referencedFrameIdx;
         }
-        if (referencedFrameIdx == 0) {
-            // empty entry (page fault)
-            if ((entry_idx == 0)) {
-                return 0; // signal that an empty table was found
-            } else {
-                // non-existing table
-                return -1; // (we know that all remaining entries are 0 as well)
-            }
-        } else {
+        if (referencedFrameIdx != 0) {
+            tableIsEmpty = false;
             if (currDepth == TABLES_DEPTH) {
                 // we've reached a leaf, i.e a reference to a page
-                uint64_t cyclicDist = calcCyclicDist((uint64_t)referencedFrameIdx, pageSwapInIdx);
+                double cyclicDist = calcCyclicDist((uint64_t)referencedFrameIdx, pageSwapInIdx);
                 if (cyclicDist > maxDist) {
                     maxDist = cyclicDist;
                     maxDistPage = (uint64_t)referencedFrameIdx;
@@ -181,6 +176,10 @@ int findUnusedFrame(uint64_t root, int currDepth, uint64_t& maxDistPage, uint64_
             }
         }
     }
+    if (tableIsEmpty && (root != lastTableCreated)) {
+        // we ran through all entries, which are 0, and it's not a table we've just created
+        return 0;
+    }
     return -1; // no empty table was found.
 }
 
@@ -194,4 +193,15 @@ double calcCyclicDist(uint64_t pageIdx, uint64_t pageSwapInIdx)
 {
     return fmin(NUM_PAGES - abs((int)(pageSwapInIdx - pageIdx)),
                 abs((int)(pageSwapInIdx - pageIdx)));
+}
+
+/**
+ * called if findUnusedFrame fails.
+ * clear table and delete parent reference to it
+ */
+void swapPage(uint64_t& frameIndex, uint64_t& pageIndex, uint64_t frameParent) //todo - how do we get pageIndex?
+{
+    PMevict(frameIndex, pageIndex);
+    PMwrite(frameParent ,0);
+
 }
