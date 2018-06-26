@@ -30,9 +30,10 @@ int VMwrite(uint64_t virtualAddress, word_t value) {
  * @param address
  * @return
  */
-std::bitset<VIRTUAL_ADDRESS_WIDTH> addressToBin(int address){
-    return std::bitset<VIRTUAL_ADDRESS_WIDTH>(address);
-}
+//std::bitset<VIRTUAL_ADDRESS_WIDTH> addressToBin(int address){
+//    return std::bitset<VIRTUAL_ADDRESS_WIDTH>(address);
+//}
+/// we probably don't need this - we can do bit operations on any number..
 
 /**
  * Interpret a binary address as an index + offset.
@@ -41,18 +42,16 @@ std::bitset<VIRTUAL_ADDRESS_WIDTH> addressToBin(int address){
  */
 void addressInterpreter(int address, uint64_t addressTuple[2])
 {
-//    uint64_t *addressTuple;
-    std::bitset<VIRTUAL_ADDRESS_WIDTH> binaryAddress = addressToBin(address);
-    std::bitset<OFFSET_WIDTH> offset;
-    std::bitset<INDEX_LENGTH> index;
-    index.set(); // sets index bits to ones
-    for (int i = 0; i < OFFSET_WIDTH; i++)
-    {
-        offset.set(i, binaryAddress[0]);
-        binaryAddress >>= 1; //shift right - trims the offset
-    }
-    addressTuple[1] = offset.to_ulong();
-    addressTuple[0] = binaryAddress.to_ulong();
+    uint64_t binaryAddress = address;
+    uint64_t offset = 0;
+    uint64_t index;
+    int powerOfTwo = 2;
+    powerOfTwo<<=OFFSET_WIDTH-1; //2^OFFSETWIDTH
+    uint64_t pattern = powerOfTwo-1; // A number with OFFSET_WIDTH ones
+    offset = (pattern & binaryAddress);
+    binaryAddress >>= OFFSET_WIDTH; //shift right - trims the offset
+    addressTuple[1] = offset;
+    addressTuple[0] = binaryAddress;
 }
 
 /**
