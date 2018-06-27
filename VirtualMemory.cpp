@@ -23,12 +23,17 @@ void VMinitialize() {
 int VMread(uint64_t virtualAddress, word_t* value) {
     uint64_t frame = callTraverseTree(virtualAddress);
     uint64_t offset = calcOffset(virtualAddress, OFFSET_WIDTH);
-    PMread((frame*PAGE_SIZE)+offset, value);  // todo: is the calc correct
+    PMread((frame*PAGE_SIZE)+offset, value);
+    // when do we fail
     return 1;
 }
 
 
 int VMwrite(uint64_t virtualAddress, word_t value) {
+    uint64_t frame = callTraverseTree(virtualAddress);
+    uint64_t offset = calcOffset(virtualAddress, OFFSET_WIDTH);
+    PMwrite((frame*PAGE_SIZE)+offset, value);
+    // when do we fail
     return 1;
 }
 
@@ -128,7 +133,7 @@ int traverseTree(int i, int root, uint64_t* parsedAddress, int originalIndex){
                     clearTable(root);
                 } else { // all frames are used -> evict
                     swapPage(context.maxDistPage, context.maxDistPageIndex, context.maxDistParent, parent, context.pageSwapInIdx);
-
+                    root = context.maxDistPage;
                 }
             }
             PMwrite((parent * PAGE_SIZE) + index, root);
@@ -227,6 +232,6 @@ void swapPage(uint64_t& frameIndex, uint64_t& pageIndex, uint64_t frameParent, u
     PMevict(frameIndex, pageIndex);
     PMwrite(frameParent ,0);
     clearTable(frameIndex);
-    PMwrite(frameIndex,newPageIndex);
+//    PMwrite(frameIndex,newPageIndex);
     PMwrite(newParentFrame,frameIndex);
 }
