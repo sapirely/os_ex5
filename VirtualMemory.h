@@ -10,12 +10,22 @@
 
 #define INDEX_LENGTH (VIRTUAL_ADDRESS_WIDTH-OFFSET_WIDTH) // is this correct todo
 
-// ------------------------------------- PT in the tree ------------------------------------- //
-//struct Table
-//{
-//    int* table;
-//    int maxReferencedFrame;
-//}Table;
+// ------------------------------------- RecursionContext struct------------------------------------- //
+
+struct RecursionContext
+{
+    uint64_t root;
+    uint64_t rootIndex;
+    int currDepth;
+    uint64_t& maxDistPage;
+    uint64_t& maxDistPageIndex;
+    uint64_t& maxDistParent;
+    double& maxDist;
+    uint64_t pageSwapInIdx;
+    uint64_t&maxUsedFrameIdx;
+    uint64_t lastTableCreated;
+
+}recursionContext;
 
 
 // ------------------------------------- library methods ------------------------------------- //
@@ -45,6 +55,7 @@ int VMwrite(uint64_t virtualAddress, word_t value);
 
 // ------------------------------------- inner methods ------------------------------------- //
 
+
 /**
  * Translates a decimal address to binary.
  * @param address
@@ -69,22 +80,23 @@ int maxCyclicDist(int targetPage);
 
 
 /**
- * @param currTableAddress root of the subtree.
- * @param maxDistPage idx of the page with max cyclic distance so far.
+ * @param root root of the subtree (frame).
+ * @param maxDistPage idx of the page with max cyclic distance so far
  * @param maxDist max cyclic distance found.
- * @param maxUsedFrame maximal index of a referenced frame.
+ * @param maxUsedFrameIdx maximal index of a referenced frame.
  * @param currDepth depth of the subtree rooted at currTableAddress.
  * @param maxDistParent parent of the page with max cyclic distance so far.
- * @return idx of an unused frame in the physical memory (if an empty table was found, the method
- * initializes its entries to 0 and returns an idx of a frame in the table).
+ * @return idx of an unused frame in the physical memory if an empty table was found (the reference
+ * to the table is removed from the tree).
+ * Otherwise, the method returns -1 and sets maxUsedFrameIdx to hold the maximal index of a
+ * referenced frame, and maxDistPage to hold the index of the page with max cyclic distance.
  */
-int findUnusedFrame(uint64_t currTableAddress, int currDepth, uint64_t& maxDistPage,
-                    uint64_t maxDistParent, uint64_t maxDist, uint64_t maxUsedFrame,
-                    uint64_t lastTableCreated);
+int findUnusedFrame(RecursionContext context);
 
 /**
  * called if findUnusedFrame fails.
  * use maxCyclicDist, clear table, and delete parent reference to it
+ *
  */
 void swapPage(uint64_t& maxDistPage, uint64_t maxDistParent);
 
