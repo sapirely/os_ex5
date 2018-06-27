@@ -12,20 +12,20 @@
 
 // ------------------------------------- RecursionContext struct------------------------------------- //
 
-struct RecursionContext
+typedef struct
 {
     uint64_t root;
     uint64_t rootIndex;
     int currDepth;
-    uint64_t& maxDistPage;
-    uint64_t& maxDistPageIndex;
-    uint64_t& maxDistParent;
-    double& maxDist;
+    uint64_t* maxDistPage;
+    uint64_t* maxDistPageIndex;
+    uint64_t* maxDistParent;
+    double* maxDist;
     uint64_t pageSwapInIdx;
-    uint64_t&maxUsedFrameIdx;
+    uint64_t* maxUsedFrameIdx;
     uint64_t lastTableCreated;
 
-}recursionContext;
+}RecursionContext;
 
 
 // ------------------------------------- library methods ------------------------------------- //
@@ -98,7 +98,7 @@ int findUnusedFrame(RecursionContext context);
  * use maxCyclicDist, clear table, and delete parent reference to it
  *
  */
-void swapPage(uint64_t& maxDistPage, uint64_t maxDistParent);
+void swapPage(uint64_t& frameIndex, uint64_t& pageIndex, uint64_t frameParent, uint64_t newParentFrame);
 
 /**
  * @param address
@@ -129,7 +129,10 @@ uint64_t callTraverseTree(uint64_t address);
  * returns a frame. (if 0, finds a free frame)
  * @return
  */
-int traverseTree(int i, int root, uint64_t* parsedAddress);
+int traverseTree(int depth, int root, uint64_t *parsedAddress, int originalIndex,
+                 uint64_t lastTableCreated,
+                 uint64_t *maxUsedFrameIdx,
+                 uint64_t *maxDistPageIndex, double *maxDist, uint64_t* maxDistParent, uint64_t* maxDistPage);
 
 /**
  * After traversing over the tree and finding the frame, write to it.

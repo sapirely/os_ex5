@@ -99,8 +99,14 @@ uint64_t callTraverseTree(uint64_t address){
     addressInterpreter(address, &index, &offset, OFFSET_WIDTH);
     parseAddress(address, parsedAddress);
     int i=0;
-    int root=0;
-    int frame = traverseTree(i, root, parsedAddress, index, -1);
+    uint64_t root=0;
+    uint64_t maxUsedFrameIdx = 0;
+    uint64_t maxDistFrameIndex = 0;
+    uint64_t maxDistParent = 0;
+    uint64_t maxDistPage = 0;
+    double maxDist = 0;
+    int frame = traverseTree(i, root, parsedAddress, index, -1, &maxUsedFrameIdx, &maxDistFrameIndex,
+                             &maxDist, &maxDistParent, &maxDistPage);
     return (uint64_t) frame; // todo: fix
 }
 
@@ -113,12 +119,23 @@ uint64_t callTraverseTree(uint64_t address){
 
 // there are TABLE_DEPTH levels, each table is PAGE_SIZE size;
 //
-int traverseTree(int depth, int root, uint64_t* parsedAddress, int originalIndex, int lastTableCreated){
+int traverseTree(int depth, int root, uint64_t *parsedAddress, int originalIndex,
+                 uint64_t lastTableCreated,
+                 uint64_t *maxUsedFrameIdx,
+                 uint64_t *maxDistPageIndex, double *maxDist, uint64_t* maxDistParent, uint64_t* maxDistPage){
     int index;
-    int parent;
+    uint64_t parent;
     parent = root;
     RecursionContext context;
     context.lastTableCreated = lastTableCreated;
+    context.maxUsedFrameIdx = maxUsedFrameIdx;
+    context.maxDistPageIndex = maxDistPageIndex;
+    context.maxDist = maxDist;
+    context.maxDistParent = maxDistParent;
+    context.maxDistPage = maxDistPage;
+    // added the following bc they were weirdly large - is it ok? todo
+    context.rootIndex=0;
+    context.currDepth=0;
     if (depth<TABLES_DEPTH-1) // -1 bc we don't want the value in the frame, just the frame number
     {
         index = parsedAddress[depth];
@@ -130,12 +147,13 @@ int traverseTree(int depth, int root, uint64_t* parsedAddress, int originalIndex
             root = findUnusedFrame(context);
             if (root == -1){
                 // case: unused frames exist
-                if (context.maxUsedFrameIdx < NUM_FRAMES-1){
-                    root = context.maxUsedFrameIdx+1;
+                if (*(context.maxUsedFrameIdx) < NUM_FRAMES-1){
+                    root = *(context.maxUsedFrameIdx)+1;
                     clearTable(root);
                 } else { // all frames are used -> evict
-                    swapPage(context.maxDistPage, context.maxDistPageIndex, context.maxDistParent, parent, context.pageSwapInIdx);
-                    root = context.maxDistPage;
+                    swapPage(*(context.maxDistPage), *(context.maxDistPageIndex), *(context.maxDistParent),
+                             parent);
+                    root = *(context.maxDistPage);
                 }
             } else { // found unused frame
                 clearTable(root);
@@ -144,7 +162,9 @@ int traverseTree(int depth, int root, uint64_t* parsedAddress, int originalIndex
             PMwrite((parent * PAGE_SIZE) + index, root);
         }
         depth++;
-        traverseTree(depth, root, parsedAddress, originalIndex, context.lastTableCreated);
+        traverseTree(depth, root, parsedAddress, originalIndex, context.lastTableCreated,
+                     context.maxUsedFrameIdx, context.maxDistPageIndex, context.maxDist, context
+                             .maxDistParent, context.maxDistPage);
     } else { // finished traversing over the tree, last frame is in root
         return root;
     }
@@ -169,20 +189,19 @@ int findUnusedFrame(RecursionContext context)
     for (int entry_idx = 0; entry_idx < PAGE_SIZE; entry_idx++)
     {
         PMread((context.root * PAGE_SIZE) + entry_idx, &referencedFrameIdx);
-        if (referencedFrameIdx > context.maxUsedFrameIdx) {
+        if (referencedFrameIdx > *(context.maxUsedFrameIdx)) {
             // update max referenced frame
-            context.maxUsedFrameIdx = (uint64_t)referencedFrameIdx;
+            *(context.maxUsedFrameIdx) = (uint64_t)referencedFrameIdx;
         }
         if (referencedFrameIdx != 0) {
             tableIsEmpty = false;
             if (context.currDepth == TABLES_DEPTH) {
                 // we've reached a leaf, i.e a reference to a page
                 double cyclicDist = calcCyclicDist((uint64_t)referencedFrameIdx, context.pageSwapInIdx);
-                if (cyclicDist > context.maxDist) {
-                    context.maxDist = cyclicDist;
-                    context.maxDistPage = (uint64_t)referencedFrameIdx;
-                    context.maxDistParent = context.root;
-                    context.maxDistPageIndex = context.rootIndex;
+                if (cyclicDist > *(context.maxDist)) {
+                    *(context.maxDist) = cyclicDist;
+                    *(context.maxDistPage) = (uint64_t)referencedFrameIdx;
+                    *(context.maxDistParent) = context.root;
                 }
                 return -1; // no empty table was found
             } else {
@@ -231,8 +250,7 @@ double calcCyclicDist(uint64_t pageIdx, uint64_t pageSwapInIdx)
  * called if findUnusedFrame fails.
  * clear table and delete parent reference to it
  */
-void swapPage(uint64_t& frameIndex, uint64_t& pageIndex, uint64_t frameParent, uint64_t newParentFrame,
-              uint64_t newPageIndex)
+void swapPage(uint64_t& frameIndex, uint64_t& pageIndex, uint64_t frameParent, uint64_t newParentFrame)
 {
     PMevict(frameIndex, pageIndex);
     PMwrite(frameParent ,0);
