@@ -129,10 +129,7 @@ uint64_t callTraverseTree(uint64_t address);
  * returns a frame. (if 0, finds a free frame)
  * @return
  */
-int traverseTree(int depth, int root, uint64_t *parsedAddress, int originalIndex,
-                 uint64_t lastTableCreated,
-                 uint64_t *maxUsedFrameIdx,
-                 uint64_t *maxDistPageIndex, double *maxDist, uint64_t* maxDistParent, uint64_t* maxDistPage);
+int traverseTree(int depth, int root, uint64_t *parsedAddress, int originalIndex, RecursionContext context);
 
 /**
  * After traversing over the tree and finding the frame, write to it.
