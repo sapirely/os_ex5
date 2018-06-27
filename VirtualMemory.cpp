@@ -100,7 +100,7 @@ uint64_t callTraverseTree(uint64_t address){
     parseAddress(address, parsedAddress);
     int i=0;
     int root=0;
-    int frame = traverseTree(i, root, parsedAddress, index);
+    int frame = traverseTree(i, root, parsedAddress, index, -1);
     return (uint64_t) frame; // todo: fix
 }
 
@@ -113,33 +113,38 @@ uint64_t callTraverseTree(uint64_t address){
 
 // there are TABLE_DEPTH levels, each table is PAGE_SIZE size;
 //
-int traverseTree(int i, int root, uint64_t* parsedAddress, int originalIndex){
+int traverseTree(int depth, int root, uint64_t* parsedAddress, int originalIndex, int lastTableCreated){
     int index;
     int parent;
     parent = root;
     RecursionContext context;
-    if (i<TABLES_DEPTH-1) // -1 bc we don't want the value in the frame, just the frame number
+    context.lastTableCreated = lastTableCreated;
+    if (depth<TABLES_DEPTH-1) // -1 bc we don't want the value in the frame, just the frame number
     {
-        index = parsedAddress[i];
+        index = parsedAddress[depth];
         PMread((root * PAGE_SIZE) + index, &root);
         if (root==0){
             context.root = root;
             context.pageSwapInIdx = originalIndex;
+
             root = findUnusedFrame(context);
             if (root == -1){
                 // case: unused frames exist
-                if (context.maxUsedFrameIdx < NUM_FRAMES){
+                if (context.maxUsedFrameIdx < NUM_FRAMES-1){
                     root = context.maxUsedFrameIdx+1;
                     clearTable(root);
                 } else { // all frames are used -> evict
                     swapPage(context.maxDistPage, context.maxDistPageIndex, context.maxDistParent, parent, context.pageSwapInIdx);
                     root = context.maxDistPage;
                 }
+            } else { // found unused frame
+                clearTable(root);
             }
+            context.lastTableCreated = root;
             PMwrite((parent * PAGE_SIZE) + index, root);
         }
-        i++;
-        traverseTree(i, root, parsedAddress, originalIndex);
+        depth++;
+        traverseTree(depth, root, parsedAddress, originalIndex, context.lastTableCreated);
     } else { // finished traversing over the tree, last frame is in root
         return root;
     }
@@ -183,10 +188,10 @@ int findUnusedFrame(RecursionContext context)
             } else {
                 // not a leaf - check children.
                 context.rootIndex<<=PAGE_SIZE;
-                context.rootIndex += entry_idx;
+                context.rootIndex += referencedFrameIdx;
                 context.currDepth++;
                 int retVal = findUnusedFrame(context);
-                context.rootIndex -= entry_idx;
+                context.rootIndex -= referencedFrameIdx;
                 context.rootIndex>>=PAGE_SIZE;
                 context.currDepth--;
                 if (retVal == -1) {
@@ -203,10 +208,10 @@ int findUnusedFrame(RecursionContext context)
             }
         }
     }
-    if (tableIsEmpty && (context.root != context.lastTableCreated)) {
-        // we ran through all entries, which are 0, and it's not a table we've just created
-        return 0;
-    }
+//    if (tableIsEmpty && (context.root != context.lastTableCreated)) {
+//        // we ran through all entries, which are 0, and it's not a table we've just created
+//        return -1;
+//    }
     return -1; // no empty table was found.
 }
 
