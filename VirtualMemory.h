@@ -16,6 +16,7 @@ typedef struct
 {
     uint64_t root;
     uint64_t rootIndex;
+    uint64_t parent;
     int currDepth;
     uint64_t* maxDistPage;
     uint64_t* maxDistPageIndex;
@@ -131,17 +132,6 @@ uint64_t callTraverseTree(uint64_t address);
  */
 int traverseTree(int depth, int root, uint64_t *parsedAddress, int originalIndex, RecursionContext context);
 
-/**
- * After traversing over the tree and finding the frame, write to it.
- * @return
- */
-int writeToLeaf(int frameNum, int pageNum);
-
-/**
- * After traversing over the tree and finding the frame, read from it.
- * @return
- */
-int readFromLeaf(int frameNum, int pageNum);
 
 /**
  * Calculates the cyclic distance of the page in index pageIdx from the index of the page that we
