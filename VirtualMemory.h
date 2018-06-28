@@ -98,7 +98,7 @@ int findUnusedFrame(RecursionContext context);
  * use maxCyclicDist, clear table, and delete parent reference to it
  *
  */
-void swapPage(uint64_t& frameIndex, uint64_t& pageIndex, uint64_t frameParent, uint64_t newParentFrame);
+void swapPage(uint64_t& oldFrameIndex, uint64_t& oldPageIndex, uint64_t oldFrameParent, uint64_t newParentFrame);
 
 /**
  * @param address
