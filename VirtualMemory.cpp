@@ -54,7 +54,7 @@ int findUnusedFrame(RecursionContext context);
  * use maxCyclicDist, clear table, and delete parent reference to it
  *
  */
-void swapPage(uint64_t& oldFrameIndex, uint64_t& oldPageIndex, uint64_t oldFrameParent, uint64_t newParentFrame);
+void swapPage(uint64_t& oldFrameIndex, uint64_t& oldPageIndex, uint64_t oldFrameParent);
 
 /**
  * @param address
@@ -194,7 +194,7 @@ uint64_t callTraverseTree(uint64_t address){
     uint64_t index, offset;
     addressInterpreter(address, &index, &offset, OFFSET_WIDTH);
     parseAddress(address, parsedAddress);
-    int i=0;
+//    int i=0;
     uint64_t root=0;
     uint64_t maxUsedFrameIdx = 0;
     uint64_t maxDistFrameIndex = 0;
@@ -245,8 +245,8 @@ int traverseTree(int depth, int root, uint64_t *parsedAddress, uint64_t original
                     clearTable((uint64_t )root);
                 } else { // all frames are used -> evict
 //                    printf("in swap, max frame: %d\n", *(context.maxUsedFrameIdx));
-                    swapPage(*(currContext.maxDistPage), *(currContext.maxDistPageIndex), *(currContext.maxDistParent),
-                             parent);
+                    swapPage(*(currContext.maxDistPage), *(currContext.maxDistPageIndex), *(currContext
+                            .maxDistParent));
                     root = (int) *(currContext.maxDistPage);
                 }
             } else { // found unused frame
@@ -283,7 +283,7 @@ int findUnusedFrame(RecursionContext context)
     for (int entry_idx = 0; entry_idx < PAGE_SIZE; entry_idx++)
     {
         PMread((context.root * PAGE_SIZE) + entry_idx, &referencedFrameIdx);
-        if (referencedFrameIdx > *(context.maxUsedFrameIdx)) {
+        if ((uint64_t) referencedFrameIdx > *(context.maxUsedFrameIdx)) {
             // update max referenced frame
             *(context.maxUsedFrameIdx) = (uint64_t)referencedFrameIdx;
         }
@@ -354,7 +354,7 @@ double calcCyclicDist(uint64_t pageIdx, uint64_t pageSwapInIdx)
  * called if findUnusedFrame fails.
  * clear table and delete parent reference to it
  */
-void swapPage(uint64_t& oldFrameIndex, uint64_t& oldPageIndex, uint64_t oldFrameParent, uint64_t newParentFrame)
+void swapPage(uint64_t& oldFrameIndex, uint64_t& oldPageIndex, uint64_t oldFrameParent)
 {
     PMevict(oldFrameIndex, oldPageIndex);
     PMwrite(oldFrameParent ,0);
