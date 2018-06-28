@@ -26,8 +26,7 @@ typedef int word_t;
 #define VIRTUAL_MEMORY_SIZE (1LL << VIRTUAL_ADDRESS_WIDTH)
 
 // number of frames in the RAM
-//#define NUM_FRAMES (RAM_SIZE / PAGE_SIZE)
-#define NUM_FRAMES (7)
+#define NUM_FRAMES (RAM_SIZE / PAGE_SIZE)
 
 // number of pages in the virtual memory
 #define NUM_PAGES (VIRTUAL_MEMORY_SIZE / PAGE_SIZE)
